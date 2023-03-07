@@ -13,8 +13,8 @@ Created on Thu Mar  2 13:19:24 2023
 import argparse
 import os
 import sys
-#from weasyprint import HTML
-#from weasyprint import CSS
+from weasyprint import HTML
+from weasyprint import CSS
 # try:
 #     from PyPDF2 import PdfReader, PdfWriter
 # except:
@@ -743,7 +743,7 @@ def anonymize_report(args):
     print('corrected html')
            
     # write anonymized html to pdf
-    #convert_html_to_pdf(html_file, args.pdf)
+    convert_html_to_pdf(html_file, args.pdf)
      
     print('converted html to pdf')
     
