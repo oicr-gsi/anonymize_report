@@ -170,9 +170,13 @@ def get_project_name(html_file):
 
 def get_user_ticket(html_file):
     '''
+    (str) -> (str, str)
     
+    Returns the user name and ticket from the html report
     
-    
+    Parameters
+    ----------
+    - html_file (str): Path to the html report
     '''
 
     infile = open(html_file)
@@ -307,7 +311,7 @@ def get_identifiers(html_file):
 
 
 
-def get_file_prefixes(html_file, project):
+def get_file_prefixes(html_file):
     '''
     (str, str) -> list
     
@@ -316,21 +320,38 @@ def get_file_prefixes(html_file, project):
     Parameters
     ----------
     - html_file (str): Path to the html file to edit
-    - project (str): Name of the project
     '''
 
-    prefixes = []
     infile = open(html_file)
-    for line in infile:
-        if '<td>' in line:
-            line = line.strip()
-            line = line.replace('<td>', '').replace('</td>', '').strip().split('_')
-            if line[0].startswith(project):
-                barcode = ''.join(line[-1].split('-'))
-                if all(map(lambda x: x.upper() in 'ATCG', barcode)):
-                    prefixes.append('_'.join(line))
+    html = infile.read().strip().split('\n')
     infile.close()
+
+    start, end = -1, -1
+    html = list(map(lambda x: x.strip(), html))
+    while '' in html:
+        html.remove('')
+    start = html.index('<h2>3. QC metrics</h2>')
+    end = html.index('<h2>4. QC plots</h2>', start+1)
+    assert start > 0 and end > 0
+
+    L = [i for i in html[start: end] if '<td>' in i]
+    
+    prefixes = [L[i].replace('<td>', '').replace('</td>', '').strip() for i in range(1, len(L), 4)]
+    
     return prefixes
+ 
+   # prefixes = []
+    # infile = open(html_file)
+    # for line in infile:
+    #     if '<td>' in line:
+    #         line = line.strip()
+    #         line = line.replace('<td>', '').replace('</td>', '').strip().split('_')
+    #         if line[0].startswith(project):
+    #             barcode = ''.join(line[-1].split('-'))
+    #             if all(map(lambda x: x.upper() in 'ATCG', barcode)):
+    #                 prefixes.append('_'.join(line))
+    # infile.close()
+    # return prefixes
 
 
 
@@ -503,18 +524,17 @@ def generate_replacement_text(html_file):
     # parse the identifiers from the identifiers table
     library, case, donor, sample, description = get_identifiers(html_file)
     
-    # extract identifiers from identifer table
-    
     # get the jira ticket and the user name
-    user = ' '.join(pdf_text[-1].rstrip().split()[:-1])
-    ticket = pdf_text[-1].rstrip().split()[-1]
+    user, ticket = get_user_ticket(html_file)
+
+    #user = ' '.join(pdf_text[-1].rstrip().split()[:-1])
+    #ticket = pdf_text[-1].rstrip().split()[-1]
 
     # get the file prefixes
     # prefix = get_file_prefixes(group_metrics(pdf_text), project)
    
-    # file prefixes are inconsistantly formatted in pdf text, with inconsistent truncations,
-    # making them hard to parse.  instead file prefixes are extracted from the html file   
-    prefix = get_file_prefixes(html_file, project)
+    # parse file prefixes from the metrics table(s)
+    prefix = get_file_prefixes(html_file)
 
     # replace donor Ids
     donors = rename_identifiers(donor, project, 'donor')
