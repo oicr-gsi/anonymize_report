@@ -536,6 +536,10 @@ def generate_replacement_text(html_file):
     # parse file prefixes from the metrics table(s)
     prefix = get_file_prefixes(html_file)
 
+
+
+
+
     # replace donor Ids
     donors = rename_identifiers(donor, project, 'donor')
     # replace case Ids
@@ -732,13 +736,14 @@ def anonymize_report(args):
     print('generated replacement text')
     
     # replace identifiers in html
-    project, full_name = get_project_name(pdf_text)
+    #project, full_name = get_project_name(pdf_text)
+    project, full_name = get_project_name(html_file)
     correct_html(html_file, replacements, project)
     
     print('corrected html')
            
     # write anonymized html to pdf
-    convert_html_to_pdf(html_file, args.pdf)
+    #convert_html_to_pdf(html_file, args.pdf)
      
     print('converted html to pdf')
     
