@@ -15,10 +15,10 @@ import os
 import sys
 #from weasyprint import HTML
 #from weasyprint import CSS
-try:
-    from PyPDF2 import PdfReader, PdfWriter
-except:
-    from PyPDF2 import PdfFileReader, PdfFileWriter
+# try:
+#     from PyPDF2 import PdfReader, PdfWriter
+# except:
+#     from PyPDF2 import PdfFileReader, PdfFileWriter
 import uuid
 import shutil
 
@@ -46,53 +46,53 @@ def convert_html_to_pdf(html_file, outputfile):
 
 
 
-def create_temp_pdf(html_file):
-    '''
-    (str) -> str
+# def create_temp_pdf(html_file):
+#     '''
+#     (str) -> str
     
-    Return path to temporary PDF converted from the html file without modifications
+#     Return path to temporary PDF converted from the html file without modifications
         
-    Parameters
-    ----------
-    - html_file (str): Path to the ftml file to be modified
-    '''
+#     Parameters
+#     ----------
+#     - html_file (str): Path to the ftml file to be modified
+#     '''
     
-    tmp_pdf = html_file[:-4] + str(uuid.uuid4()) + '.pdf' 
-    convert_html_to_pdf(html_file, tmp_pdf)
+#     tmp_pdf = html_file[:-4] + str(uuid.uuid4()) + '.pdf' 
+#     convert_html_to_pdf(html_file, tmp_pdf)
     
-    return tmp_pdf
+#     return tmp_pdf
 
 
-def extract_pdf_text(temp_pdf):
-    '''
-    (str) -> list
+# def extract_pdf_text(temp_pdf):
+#     '''
+#     (str) -> list
     
-    Returns a list of lines in the PDF
+#     Returns a list of lines in the PDF
     
-    Parameters
-    ----------
-    - temp_pdf (str): Path to the unmodified pdf
-    '''
+#     Parameters
+#     ----------
+#     - temp_pdf (str): Path to the unmodified pdf
+#     '''
     
-    try:
-        pdf = PdfReader(temp_pdf)
-    except:
-        pdf = PdfFileReader(temp_pdf)
+#     try:
+#         pdf = PdfReader(temp_pdf)
+#     except:
+#         pdf = PdfFileReader(temp_pdf)
         
-    T = []
+#     T = []
 
-    #for i in range(pages):
-    for page in pdf.pages:
-        try:
-            text = page.extract_text()
-        except:
-            text = page.extractText()
-        T.extend(text.split('\n'))
+#     #for i in range(pages):
+#     for page in pdf.pages:
+#         try:
+#             text = page.extract_text()
+#         except:
+#             text = page.extractText()
+#         T.extend(text.split('\n'))
     
-    while '' in T:
-        T.remove('')
+#     while '' in T:
+#         T.remove('')
        
-    return T
+#     return T
     
     
 
@@ -168,6 +168,47 @@ def get_project_name(html_file):
 #     return L
 
 
+def get_user_ticket(html_file):
+    '''
+    
+    
+    
+    '''
+
+    infile = open(html_file)
+    html = infile.read().strip().split('\n')
+    infile.close()
+        
+    start = -1
+    html = list(map(lambda x: x.strip(), html))
+    while '' in html:
+        html.remove('')
+    start = html.index('<th colspan="2">For internal use only</th>')
+    assert start > 0
+    
+    L = [i for i in html[start: ] if '<td>' in i]
+
+    user = L[0].replace('<td>', '').replace('</td>', '').strip()
+    ticket = L[1].replace('<td>', '').replace('</td>', '').strip()
+    
+    return user, ticket
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def group_identifiers(html_file):
     '''    
@@ -220,26 +261,49 @@ def group_identifiers(html_file):
 
 
 
-def get_identifiers(identifiers, project):
+def get_identifiers(html_file):
     '''
     (list, str) -> list
     
-    Returns a list of parallel list of identifiers extracted from the identifier table of the PDF report
+    Returns a list of parallel list of identifiers extracted from the identifier table of the html report
     
     Parameters
     ----------
-    - identifiers (list): List of rows from the identifier table in the PDF report
-    - project (str): Project name
+    - html_file (str): Path to the original html report
     '''
-        
+
+    # extract identifiers from the identifiers table of the html file
+    identifiers = group_identifiers(html_file)
+
+
     L = [[], [], [], [], []]
+
+    for k in range(len(L)):
+        L[k].extend([identifiers[i].replace('<td>', '').replace('</td>', '').strip() for i in range(k, len(identifiers), 8)])
+    assert len(L[0]) == len(L[1]) == len(L[2]) == len(L[3]) == len(L[4])
+
+    # libraries = [identifiers[i].replace('<td>', '').replace('</td>', '').strip() for i in range(0, len(identifiers), 8)]
+    # cases = [identifiers[i].replace('<td>', '').replace('</td>', '').strip() for i in range(1, len(identifiers), 8)]
+    # donors = [identifiers[i].replace('<td>', '').replace('</td>', '').strip() for i in range(2, len(identifiers), 8)]
     
-    for j in identifiers:
-        if j.startswith(project):
-            j = j.rstrip().split()
-            for i in range(5):
-                L[i].append(j[i])
+    # samples = [identifiers[i].replace('<td>', '').replace('</td>', '').strip() for i in range(3, len(identifiers), 8)]
+    
+    # description = [identifiers[i].replace('<td>', '').replace('</td>', '').strip() for i in range(4, len(identifiers), 8)]
+    
     return L
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -414,6 +478,14 @@ def rename_identifiers(L, project, sample):
 #     return D    
 
 
+    
+    
+    
+    
+
+
+
+
 def generate_replacement_text(html_file):
     '''
     (str, list) -> dict
@@ -429,14 +501,9 @@ def generate_replacement_text(html_file):
     project, full_name = get_project_name(html_file)
     
     # parse the identifiers from the identifiers table
-    identifiers = group_identifiers(html_file)
-    
-    
-    
-    
+    library, case, donor, sample, description = get_identifiers(html_file)
     
     # extract identifiers from identifer table
-    library, case, donor, sample, description = get_identifiers(group_identifiers(pdf_text), project)   
     
     # get the jira ticket and the user name
     user = ' '.join(pdf_text[-1].rstrip().split()[:-1])
