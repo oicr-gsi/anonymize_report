@@ -169,25 +169,31 @@ def get_project_name(html_file):
 
 
 
-def group_identifiers(html):
+def group_identifiers(html_file):
     '''    
-
-
+    (str) -> list
+    
+    Returns a list with entries from the identifiers table
+    
+    Parameters
+    ----------
+    - html_file (str): Path to the html file 
     '''
     
-    start = -1
-    end = -1
-    for i in range(len(html)):
-        if '2. Sample information for sequenced libraries' in html[i]:
-            start = i
-        elif 'Library Id: OICR-generated' in html[i]:
-            end = i
+    infile = open(html_file)
+    html = infile.read().strip().split('\n')
+    infile.close()
     
-    print(start, end)
-    
+    start, end = -1, -1
+    html = list(map(lambda x: x.strip(), html))
+    while '' in html:
+        html.remove('')
+    start = html.index('<h2>2. Sample information for sequenced libraries</h2>')
+    end = html.index('<li>Library Id: OICR-generated library identifier</li>', start+1)
     assert start > 0 and end > 0
-    L = html[start: end]
-        
+    
+    L = [i for i in html[start: end] if '<td>' in i]
+
     return L
 
 
@@ -422,6 +428,13 @@ def generate_replacement_text(html_file):
     # get the project names
     project, full_name = get_project_name(html_file)
     
+    # parse the identifiers from the identifiers table
+    identifiers = group_identifiers(html_file)
+    
+    
+    
+    
+    
     # extract identifiers from identifer table
     library, case, donor, sample, description = get_identifiers(group_identifiers(pdf_text), project)   
     
@@ -609,7 +622,7 @@ def anonymize_report(args):
     #temp_pdf = 'C:/Users/rjovelin/Desktop/H_drive_bkup/GRD-505/TFRIM4_run_level_data_release_report.2023-03-02.pdf'
     #temp_pdf = create_temp_pdf(html_file)
 
-    print('converted html to pdf')
+    #print('converted html to pdf')
     
     # extract text from pdf
     #pdf_text = extract_pdf_text(temp_pdf)
