@@ -153,6 +153,37 @@ def get_identifiers(html_file):
     return L
 
 
+def find_step(metrics, project):
+    '''
+    (list, str) -> int
+    
+    Returns the lenght of the rows in the metrics table (ie. the step to get each identifiers in the metrics table)
+    
+    Parameters
+    ----------
+    - metrics (list): List of rows from the metrics table
+    - project (str): Name of the project
+    '''
+    
+    D = {}
+    
+    for i in metrics:
+        i = i.replace('<td>', '').replace('</td>', '').strip()
+        if i.startswith(project) and not all(map(lambda x: x.upper() in 'ATCG', ''.join(set(''.join(i.split('_')[-1].split('-')))))):
+            prefix = str(uuid.uuid4())
+            assert prefix not in D
+            D[prefix] = [i]    
+        else:
+            D[prefix].append(i)
+    
+    step = len(D[list(D.keys())[0]])
+    for i in D:
+        assert len(D[i]) == step
+        
+    return step        
+        
+
+
 def get_file_prefixes(html_file):
     '''
     (str, str) -> list
@@ -178,7 +209,11 @@ def get_file_prefixes(html_file):
 
     L = [i for i in html[start: end] if '<td>' in i]
     
-    prefixes = [L[i].replace('<td>', '').replace('</td>', '').strip() for i in range(1, len(L), 4)]
+    # find the step
+    project, full_name = get_project_name(html_file)
+    step = find_step(L, project)
+    
+    prefixes = [L[i].replace('<td>', '').replace('</td>', '').strip() for i in range(1, len(L), step)]
     
     return prefixes
  
