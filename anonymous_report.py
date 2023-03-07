@@ -13,8 +13,8 @@ Created on Thu Mar  2 13:19:24 2023
 import argparse
 import os
 import sys
-from weasyprint import HTML
-from weasyprint import CSS
+#from weasyprint import HTML
+#from weasyprint import CSS
 try:
     from PyPDF2 import PdfReader, PdfWriter
 except:
@@ -96,25 +96,80 @@ def extract_pdf_text(temp_pdf):
     
     
 
-def get_project_name(pdf_text):
-    '''
-    (list) -> str, str
+# def get_project_name(pdf_text):
+#     '''
+#     (list) -> str, str
 
-    Returns the project short and full names extracted from the PDF
+#     Returns the project short and full names extracted from the PDF
+
+#     Parameters
+#     ----------
+#     - pdf_text (list): List representation of the unmodified PDF 
+#     '''
+    
+    
+#     project = pdf_text[3].split()[0]
+#     project_name = ' '.join(pdf_text[3].split()[1:-1])
+    
+#     return project, project_name
+
+
+
+def get_project_name(html_file):
+    '''
+    (str) -> str, str
+
+    Returns the project short and full names extracted from the original html
 
     Parameters
     ----------
-    - pdf_text (list): List representation of the unmodified PDF 
+    - html_file (str): Path to the html file 
     '''
     
+    infile = open(html_file)
+    html = infile.read().strip().split('\n')
+    infile.close()
     
-    project = pdf_text[3].split()[0]
-    project_name = ' '.join(pdf_text[3].split()[1:-1])
+    start, end = -1, -1
+    html = list(map(lambda x: x.strip(), html))
+    while '' in html:
+        html.remove('')
+    start = html.index('<table id="project_table">')
+    end = html.index('</table>', start+1)    
+    assert start > 0 and end > 0
+    
+    L = [i for i in html[start:end] if '<td>' in i]   
+    
+    project = L[0].split()[1]
+    project_name = L[1].split()[1]
     
     return project, project_name
+
+
+
     
 
-def group_identifiers(pdf_text):
+# def group_identifiers(pdf_text):
+#     '''    
+
+
+#     '''
+    
+#     start = -1
+#     end = -1
+#     for i in range(len(pdf_text)):
+#         if '2. Sample information for sequenced libraries' in pdf_text[i]:
+#             start = i
+#         elif 'Library Id: OICR-generated' in pdf_text[i]:
+#             end = i
+#     assert start > 0 and end > 0
+#     L = pdf_text[start: end]
+        
+#     return L
+
+
+
+def group_identifiers(html):
     '''    
 
 
@@ -122,15 +177,23 @@ def group_identifiers(pdf_text):
     
     start = -1
     end = -1
-    for i in range(len(pdf_text)):
-        if '2. Sample information for sequenced libraries' in pdf_text[i]:
+    for i in range(len(html)):
+        if '2. Sample information for sequenced libraries' in html[i]:
             start = i
-        elif 'Library Id: OICR-generated' in pdf_text[i]:
+        elif 'Library Id: OICR-generated' in html[i]:
             end = i
+    
+    print(start, end)
+    
     assert start > 0 and end > 0
-    L = pdf_text[start: end]
+    L = html[start: end]
         
     return L
+
+
+
+
+
 
 
 
@@ -278,7 +341,74 @@ def rename_identifiers(L, project, sample):
     return D 
             
             
-def generate_replacement_text(html_file, pdf_text):
+# def generate_replacement_text(html_file, pdf_text):
+#     '''
+#     (str, list) -> dict
+    
+#     Returns a dictionary with anonymized and replacement identifiers for each identifier in the report
+    
+#     Parameters
+#     ----------
+#     - pdf_text (list) List of text extracted from the report
+#     '''
+
+#     # get the project names
+#     project, full_name = get_project_name(pdf_text)
+    
+#     # extract identifiers from identifer table
+#     library, case, donor, sample, description = get_identifiers(group_identifiers(pdf_text), project)   
+    
+#     # get the jira ticket and the user name
+#     user = ' '.join(pdf_text[-1].rstrip().split()[:-1])
+#     ticket = pdf_text[-1].rstrip().split()[-1]
+
+#     # get the file prefixes
+#     # prefix = get_file_prefixes(group_metrics(pdf_text), project)
+   
+#     # file prefixes are inconsistantly formatted in pdf text, with inconsistent truncations,
+#     # making them hard to parse.  instead file prefixes are extracted from the html file   
+#     prefix = get_file_prefixes(html_file, project)
+
+#     # replace donor Ids
+#     donors = rename_identifiers(donor, project, 'donor')
+#     # replace case Ids
+#     cases = rename_identifiers(case, project, 'case')
+#     # replace samples Ids
+#     samples = rename_identifiers(sample, project, 'sample')
+    
+#     # replace library Ids
+#     libraries = {}
+#     for i in library:
+#         for j in cases:
+#             if j in i:
+#                 libraries[i] = i.replace(j, cases[j])
+    
+#     # replace file prefix
+#     prefixes = {}
+#     for i in prefix:
+#         for j in libraries:
+#             if j in i:
+#                 prefixes[i] = i.replace(j, libraries[j])
+    
+#     descriptions = {}
+#     k = 1
+#     # replace description Ids
+#     for i in description:
+#         if i not in descriptions and i not in samples:
+#             descriptions[i] = 'description_{0}'.format(k)
+#             k += 1
+    
+#     # rename identifiers
+#     D = {project: 'PROJECT', full_name: 'PROJECT NAME',
+#          user: 'XXX-XXX', ticket: ticket.split('-')[0] + 'X' * len(ticket.split('-')[0])}
+    
+#     for i in [donors, cases, samples, libraries, descriptions, prefixes]:
+#         D.update(i)
+            
+#     return D    
+
+
+def generate_replacement_text(html_file):
     '''
     (str, list) -> dict
     
@@ -290,7 +420,7 @@ def generate_replacement_text(html_file, pdf_text):
     '''
 
     # get the project names
-    project, full_name = get_project_name(pdf_text)
+    project, full_name = get_project_name(html_file)
     
     # extract identifiers from identifer table
     library, case, donor, sample, description = get_identifiers(group_identifiers(pdf_text), project)   
@@ -343,6 +473,9 @@ def generate_replacement_text(html_file, pdf_text):
         D.update(i)
             
     return D    
+
+
+
 
 
 
@@ -474,22 +607,27 @@ def anonymize_report(args):
     # convert html file to temporary pdf
     
     #temp_pdf = 'C:/Users/rjovelin/Desktop/H_drive_bkup/GRD-505/TFRIM4_run_level_data_release_report.2023-03-02.pdf'
-    temp_pdf = create_temp_pdf(html_file)
+    #temp_pdf = create_temp_pdf(html_file)
 
     print('converted html to pdf')
     
     # extract text from pdf
-    pdf_text = extract_pdf_text(temp_pdf)
+    #pdf_text = extract_pdf_text(temp_pdf)
 
-    print('pdf text')
-    print(pdf_text)
-
-    print('extracted text from pdf')
+    #print('pdf text')
+    #print(pdf_text)
+    #print('extracted text from pdf')
     
     
     
     # rename identifiers
-    replacements = generate_replacement_text(html_file, pdf_text)
+    #replacements = generate_replacement_text(html_file, pdf_text)
+    
+    replacements = generate_replacement_text(html_file)
+    
+    
+    
+    
     
     print('generated replacement text')
     
